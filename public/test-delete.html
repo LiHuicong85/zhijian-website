@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>删除功能测试</title>
+</head>
+<body style="background:#0A1628;color:#fff;font-family:system-ui;padding:20px;">
+  <h1 style="color:#00D4FF;">删除功能测试</h1>
+  <div id="log" style="background:#1a2744;padding:15px;border-radius:8px;margin:20px 0;min-height:100px;"></div>
+  
+  <script>
+    const logEl = document.getElementById('log');
+    function addLog(msg, isError=false) {
+      const time = new Date().toLocaleTimeString();
+      const color = isError ? '#ef4444' : '#22c55e';
+      logEl.innerHTML += `<div style="color:${color};margin:4px 0;">[${time}] ${msg}</div>`;
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    async function testDelete() {
+      // 1. 获取列表
+      addLog('正在获取案例列表...');
+      const res = await fetch('/api/cases');
+      const data = await res.json();
+      if (!data.success) {
+        addLog('获取失败: ' + JSON.stringify(data.error), true);
+        return;
+      }
+      
+      const cases = data.data;
+      addLog(`获取成功，共 ${cases.length} 条案例`);
+      
+      if (cases.length === 0) {
+        addLog('没有可删除的案例，先创建一个');
+        // 创建测试案例
+        const createRes = await fetch('/api/cases', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            title: '删除测试-' + Date.now(),
+            company: '测试公司',
+            category: '制造业',
+            description: '测试',
+            content_cases: '详情',
+            project_achievements_cases: '成果'
+          })
+        });
+        const createData = await createRes.json();
+        if (!createData.success) {
+          addLog('创建失败: ' + JSON.stringify(createData.error), true);
+          return;
+        }
+        addLog('创建测试案例成功');
+        // 重新获取
+        const res2 = await fetch('/api/cases');
+        const data2 = await res2.json();
+        const cases2 = data2.data;
+        addLog(`重新获取，共 ${cases2.length} 条案例`);
+        
+        // 删除刚创建的
+        const toDelete = cases2[cases2.length - 1];
+        addLog(`准备删除: ${toDelete.id} - ${toDelete.title}`);
+        
+        const delRes = await fetch(`/api/cases/${toDelete.id}`, {method: 'DELETE'});
+        const delData = await delRes.json();
+        if (delData.success) {
+          addLog('删除成功!');
+        } else {
+          addLog('删除失败: ' + JSON.stringify(delData.error), true);
+        }
+        return;
+      }
+      
+      // 删除第一条
+      const toDelete = cases[0];
+      addLog(`准备删除: ${toDelete.id} - ${toDelete.title}`);
+      
+      const delRes = await fetch(`/api/cases/${toDelete.id}`, {method: 'DELETE'});
+      const delData = await delRes.json();
+      if (delData.success) {
+        addLog('删除成功!');
+      } else {
+        addLog('删除失败: ' + JSON.stringify(delData.error), true);
+      }
+    }
+
+    addLog('页面加载完成，开始测试...');
+    testDelete();
+  </script>
+</body>
+</html>
